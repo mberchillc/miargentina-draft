@@ -163,6 +163,7 @@ button, input, textarea { font: inherit; }
 }
 .feature-card:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
 .feature-card > img { width: 100%; height: 112px; object-fit: cover; }
+.feature-card > img.feature-card__portrait { object-position: center 28%; }
 .feature-icon {
   position: absolute;
   top: 88px;
@@ -185,6 +186,46 @@ button, input, textarea { font: inherit; }
 .feature-body a { color: var(--blue-deep); font-size: 14px; font-weight: 700; text-decoration: none; }
 .feature-body a span { display: inline-block; margin-left: 9px; transition: transform .18s ease; }
 .feature-body a:hover span { transform: translateX(4px); }
+
+.partner-marquee {
+  overflow: hidden;
+  padding: 18px 0;
+  background: #fff;
+  border-top: 1px solid #edf2f7;
+  border-bottom: 1px solid #d9e8f6;
+}
+.partner-marquee__viewport { overflow: hidden; }
+.partner-marquee__track {
+  display: flex;
+  width: max-content;
+  animation: partner-marquee-scroll 34s linear infinite;
+  will-change: transform;
+}
+.partner-marquee__group {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 58px;
+  padding-right: 58px;
+}
+.partner-logo {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 180px;
+  height: 78px;
+  padding: 7px 10px;
+  background: #fff;
+}
+.partner-logo--wide { width: 300px; }
+.partner-logo--wordmark { width: 205px; }
+.partner-logo--medium { width: 210px; }
+.partner-logo--square { width: 150px; }
+.partner-logo img { width: 100%; height: 100%; object-fit: contain; }
+
+@keyframes partner-marquee-scroll {
+  to { transform: translateX(-50%); }
+}
 
 .contact {
   position: relative;
@@ -319,6 +360,7 @@ button, input, textarea { font: inherit; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+  .partner-marquee__track { animation: none; }
 }
 
 /* Con Sabor Argentino */
