@@ -36,3 +36,20 @@ if (contactForm) {
     window.location.href = `mailto:info@miargentina.us?subject=${subject}&body=${body}`;
   });
 }
+
+const commentsForm = document.querySelector('[data-comments-form]');
+const commentsNote = document.querySelector('[data-comments-note]');
+
+if (commentsForm) {
+  commentsForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const data = new FormData(commentsForm);
+    const subject = encodeURIComponent(`Comentario sobre Con Sabor Argentino — ${data.get('nombre')}`);
+    const body = encodeURIComponent(
+      `Nombre: ${data.get('nombre')}\nCorreo electrónico: ${data.get('email')}\n\n${data.get('mensaje')}`
+    );
+
+    if (commentsNote) commentsNote.textContent = 'Se abrirá tu aplicación de correo para completar el envío.';
+    window.location.href = `mailto:info@miargentina.us?subject=${subject}&body=${body}`;
+  });
+}
