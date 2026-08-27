@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "episodes": [
+    {
+      "videoId": "Hm-ZWIHohYs",
+      "title": "Con Sabor Argentino",
+      "programDate": "2026-08-16",
+      "youtubeUrl": "https://www.youtube.com/watch?v=Hm-ZWIHohYs",
+      "thumbnailUrl": "https://i.ytimg.com/vi/Hm-ZWIHohYs/maxresdefault.jpg",
+      "durationIso": "PT2H0M41S",
+      "description": "La actualidad y las historias de nuestra comunidad, en vivo desde Miami por Actualidad Radio."
+    },
+    {
+      "videoId": "Eg64yoPMiR4",
+      "title": "Con Sabor Argentino",
+      "programDate": "2026-08-09",
+      "youtubeUrl": "https://www.youtube.com/watch?v=Eg64yoPMiR4",
+      "thumbnailUrl": "https://i.ytimg.com/vi/Eg64yoPMiR4/maxresdefault.jpg",
+      "durationIso": "PT2H3M17S"
+    },
+    {
+      "videoId": "K7Qds9a27FI",
+      "title": "Con Sabor Argentino",
+      "programDate": "2026-08-02",
+      "youtubeUrl": "https://www.youtube.com/watch?v=K7Qds9a27FI",
+      "thumbnailUrl": "https://i.ytimg.com/vi/K7Qds9a27FI/maxresdefault.jpg",
+      "durationIso": "PT2H3M18S"
+    },
+    {
+      "videoId": "GX_KuQb2RFU",
+      "title": "Con Sabor Argentino",
+      "programDate": "2026-07-12",
+      "youtubeUrl": "https://www.youtube.com/watch?v=GX_KuQb2RFU",
+      "thumbnailUrl": "https://i.ytimg.com/vi/GX_KuQb2RFU/maxresdefault.jpg",
+      "durationIso": "PT2H2M32S"
+    },
+    {
+      "videoId": "-uUAqYZzjuA",
+      "title": "Con Sabor Argentino",
+      "programDate": "2026-06-14",
+      "youtubeUrl": "https://www.youtube.com/watch?v=-uUAqYZzjuA",
+      "thumbnailUrl": "https://i.ytimg.com/vi/-uUAqYZzjuA/maxresdefault.jpg",
+      "durationIso": "PT2H3M28S"
+    },
+    {
+      "videoId": "tCf-QsR31eE",
+      "title": "Con Sabor Argentino",
+      "programDate": "2026-05-10",
+      "youtubeUrl": "https://www.youtube.com/watch?v=tCf-QsR31eE",
+      "thumbnailUrl": "https://i.ytimg.com/vi/tCf-QsR31eE/maxresdefault.jpg",
+      "durationIso": "PT2H0M25S"
+    }
+  ]
+}
