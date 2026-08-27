@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Panel de seguimiento de las automatizaciones y broadcasts de MIArgentina.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#ffffff">
+  <title>Automatizaciones | MIArgentina</title>
+  <link rel="icon" href="assets/miargentina-mark-hd.jpg" type="image/jpeg">
+  <link rel="apple-touch-icon" href="assets/miargentina-mark-hd.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="automation-dashboard.css">
+  <script src="script.js" defer></script>
+  <script src="automation-dashboard.js" defer></script>
+</head>
+<body class="automation-body">
+  <a class="skip-link" href="#contenido">Saltar al contenido</a>
+
+  <header class="automation-header">
+    <div class="container automation-header__row">
+      <a class="brand" href="index.html" aria-label="MIArgentina, inicio">
+        <img src="assets/miargentina-logo.gif" alt="MIArgentina">
+      </a>
+      <div class="automation-header__identity">
+        <span>Panel de gestión</span>
+        <strong>Automatizaciones</strong>
+      </div>
+      <a class="button button--secondary automation-header__link" href="index.html">Volver al sitio</a>
+    </div>
+  </header>
+
+  <main id="contenido" class="automation-main">
+    <section class="automation-hero">
+      <div class="container automation-hero__grid">
+        <div>
+          <p class="automation-kicker">MIArgentina · Operaciones</p>
+          <h1>Seguimiento de automatizaciones</h1>
+          <p>Una vista de solo lectura para verificar qué procesos están configurados, cuándo corrieron y qué broadcasts fueron publicados.</p>
+        </div>
+        <div class="automation-hero__state" aria-live="polite">
+          <span class="status-dot" aria-hidden="true"></span>
+          <div>
+            <strong data-dashboard-state>Cargando información…</strong>
+            <span>Los datos se leen directamente de los archivos publicados por el repositorio.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="container automation-content">
+      <section class="automation-kpis" aria-label="Resumen de automatizaciones">
+        <article class="automation-kpi">
+          <span>Broadcasts registrados</span>
+          <strong data-kpi-broadcasts>—</strong>
+          <small>Emisiones disponibles en el feed</small>
+        </article>
+        <article class="automation-kpi">
+          <span>Último programa</span>
+          <strong data-kpi-latest>—</strong>
+          <small>Fecha editorial más reciente</small>
+        </article>
+        <article class="automation-kpi">
+          <span>Automatizaciones activas</span>
+          <strong data-kpi-active>—</strong>
+          <small>Procesos operativos sobre el total</small>
+        </article>
+        <article class="automation-kpi">
+          <span>Última actualización</span>
+          <strong data-kpi-updated>—</strong>
+          <small>Registro emitido por Make o el repositorio</small>
+        </article>
+      </section>
+
+      <section class="automation-section" aria-labelledby="automations-title">
+        <div class="automation-section__heading">
+          <div>
+            <p class="automation-kicker">Estado operativo</p>
+            <h2 id="automations-title">Automatizaciones</h2>
+          </div>
+          <a href="https://github.com/mberchillc/miargentina-draft/blob/main/docs/MAKE_SETUP_STEP_BY_STEP.md" target="_blank" rel="noopener noreferrer">Ver guía de configuración <span aria-hidden="true">↗</span></a>
+        </div>
+        <div class="automation-list" data-automation-list>
+          <p class="automation-empty">Cargando automatizaciones…</p>
+        </div>
+      </section>
+
+      <section class="automation-section" aria-labelledby="broadcasts-title">
+        <div class="automation-section__heading">
+          <div>
+            <p class="automation-kicker">Archivo editorial</p>
+            <h2 id="broadcasts-title">Broadcasts publicados</h2>
+          </div>
+          <a href="con-sabor-argentino.html">Ver página del programa <span aria-hidden="true">→</span></a>
+        </div>
+        <div class="automation-table-wrap">
+          <table class="automation-table">
+            <caption class="sr-only">Lista de broadcasts publicados de Con Sabor Argentino</caption>
+            <thead>
+              <tr>
+                <th scope="col">Fecha</th>
+                <th scope="col">Título</th>
+                <th scope="col">Duración</th>
+                <th scope="col">Canal</th>
+                <th scope="col">Estado</th>
+                <th scope="col"><span class="sr-only">Acción</span></th>
+              </tr>
+            </thead>
+            <tbody data-broadcast-table>
+              <tr><td colspan="6" class="automation-empty">Cargando broadcasts…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="automation-section" aria-labelledby="history-title">
+        <div class="automation-section__heading">
+          <div>
+            <p class="automation-kicker">Auditoría simple</p>
+            <h2 id="history-title">Registro de ejecuciones</h2>
+          </div>
+          <span class="automation-section__note">Make conservará las últimas 52 ejecuciones</span>
+        </div>
+        <div class="automation-history" data-run-history>
+          <p class="automation-empty">Cargando registro…</p>
+        </div>
+      </section>
+
+      <aside class="automation-notice">
+        <strong>Panel informativo y de solo lectura.</strong>
+        <p>No contiene credenciales ni permite ejecutar escenarios. Si Make no puede escribir en GitHub, la alerta y el historial interno de Make son el respaldo operativo.</p>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-row">
+      <span class="footer-copy">MIArgentina LLC © <span data-year></span></span>
+      <a class="catchdog-credit" href="https://catchdog.net/" target="_blank" rel="noopener noreferrer" aria-label="Sitio realizado por CatchDog">
+        <span>Sitio realizado por</span>
+        <img src="assets/catchdog-logo-light.png" alt="CatchDog, Work smarter" width="455" height="529">
+      </a>
+      <a class="footer-contact" href="mailto:info@miargentina.us">Contacto</a>
+    </div>
+  </footer>
+</body>
+</html>

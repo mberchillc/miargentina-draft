@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "updatedAt": "2026-08-27T17:22:41-04:00",
+  "automations": [
+    {
+      "id": "con-sabor-argentino-weekly-feed",
+      "name": "Con Sabor Argentino — emisión semanal",
+      "provider": "Make",
+      "status": "pending_configuration",
+      "schedule": {
+        "frequency": "weekly",
+        "day": "Monday",
+        "time": "09:00",
+        "timeZone": "America/New_York"
+      },
+      "lastRunAt": null,
+      "nextRunAt": null,
+      "lastResult": "repository_ready",
+      "lastMessage": "El feed y el dashboard están publicados. Falta conectar y activar el escenario en Make.",
+      "records": [
+        {
+          "runAt": "2026-08-27T17:22:41-04:00",
+          "result": "repository_ready",
+          "message": "Feed JSON y dashboard preparados en el repositorio."
+        }
+      ]
+    }
+  ]
+}

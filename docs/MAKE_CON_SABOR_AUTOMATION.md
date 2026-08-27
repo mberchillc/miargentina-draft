@@ -2,9 +2,9 @@
 
 ## Objetivo
 
-Cada lunes, Make busca la emisión completa más reciente de **Con Sabor Argentino**, actualiza `data/con-sabor-argentino.json` en el repositorio existente y deja que el commit active el despliegue ya configurado de Cloudflare Pages.
+Cada lunes, Make busca la emisión completa más reciente de **Con Sabor Argentino**, actualiza `data/con-sabor-argentino.json`, registra el resultado operativo en `data/automation-status.json` y deja que los commits activen el despliegue ya configurado de Cloudflare Pages.
 
-La página pública consume el archivo desde `/data/con-sabor-argentino.json` en el mismo dominio. No necesita API key de YouTube, credenciales de GitHub ni otros secretos en el frontend.
+La página pública consume el feed desde `/data/con-sabor-argentino.json`. El dashboard `/automatizaciones` consume ese feed y `/data/automation-status.json` desde el mismo dominio. Ninguna de las dos páginas necesita API key de YouTube, credenciales de GitHub ni otros secretos en el frontend.
 
 ## Contrato de datos
 
@@ -51,6 +51,46 @@ Campos opcionales:
 - `sourceChannelTitle`: nombre del canal de origen.
 
 La ausencia o invalidez de un campo opcional no debe impedir la publicación. Make no debe eliminar campos existentes que no esté actualizando.
+
+## Contrato del registro operativo
+
+Make debe actualizar `data/automation-status.json` en todas las ejecuciones, incluso cuando no agrega un episodio. El archivo usa este contenedor:
+
+```json
+{
+  "version": 1,
+  "updatedAt": "2026-08-31T09:03:00-04:00",
+  "automations": []
+}
+```
+
+La automatización de Con Sabor Argentino mantiene un elemento con `id` igual a `con-sabor-argentino-weekly-feed` y estos campos:
+
+```json
+{
+  "id": "con-sabor-argentino-weekly-feed",
+  "name": "Con Sabor Argentino — emisión semanal",
+  "provider": "Make",
+  "status": "active",
+  "schedule": {
+    "frequency": "weekly",
+    "day": "Monday",
+    "time": "09:00",
+    "timeZone": "America/New_York"
+  },
+  "lastRunAt": "2026-08-31T09:03:00-04:00",
+  "nextRunAt": "2026-09-07T09:00:00-04:00",
+  "lastResult": "episode_added",
+  "lastMessage": "Se agregó la emisión del 30 de agosto de 2026.",
+  "records": []
+}
+```
+
+Valores admitidos para `status`: `pending_configuration`, `active`, `warning`, `error` y `paused`.
+
+Valores previstos para `lastResult` y `records[].result`: `repository_ready`, `episode_added`, `duplicate`, `no_video`, `invalid_response`, `github_error` y `success`.
+
+Cada registro dentro de `records` debe contener `runAt`, `result` y `message`. Puede incluir `videoId` y `programDate`. Prependar cada ejecución y conservar como máximo las 52 más recientes.
 
 ## Escenario de Make
 
@@ -114,11 +154,13 @@ Descripción predeterminada aprobada, si el video no tiene una descripción util
 
 `programDate` representa la fecha del programa dominical, no necesariamente el día u hora exactos en que YouTube terminó de publicar el video.
 
-### 4. Leer el JSON actual en GitHub
+### 4. Leer los JSON actuales en GitHub
 
-Antes de escribir, Make debe obtener el contenido actual de:
+Antes de escribir, Make debe obtener el contenido y el SHA actual de:
 
 `data/con-sabor-argentino.json`
+
+`data/automation-status.json`
 
 en el repositorio existente, decodificar su contenido si la respuesta de GitHub llega en Base64 y analizarlo como JSON.
 
@@ -134,7 +176,7 @@ Guardar también el identificador de versión que exija el módulo de GitHub par
 
 Buscar `videoId` dentro del array actual.
 
-- Si ya existe el mismo `videoId`, finalizar correctamente el escenario sin crear un commit.
+- Si ya existe el mismo `videoId`, no modificar el feed de episodios y registrar `duplicate` en el archivo operativo.
 - Si no existe, agregar el nuevo episodio al comienzo.
 - Ordenar el array final por `programDate` de más reciente a más antiguo.
 - Si dos episodios tienen el mismo `programDate`, usar `publishedAt` como segundo criterio, también descendente.
@@ -144,9 +186,11 @@ Buscar `videoId` dentro del array actual.
 
 Make debe actualizar el archivo existente; no debe crear otro archivo, cambiar su ruta ni reemplazar el array por un único episodio.
 
-### 6. Actualizar GitHub
+### 6. Actualizar GitHub y el dashboard
 
-Usar la conexión de GitHub guardada dentro de Make para actualizar:
+Usar una conexión autenticada de HTTP dentro de Make contra la API de contenidos de GitHub. El token debe estar guardado en el keychain de la conexión y limitado al repositorio `mberchillc/miargentina-draft` con permiso `Contents: Read and write`.
+
+Actualizar primero, sólo cuando corresponda:
 
 `data/con-sabor-argentino.json`
 
@@ -159,6 +203,18 @@ content: add Con Sabor Argentino episode YYYY-MM-DD
 ```
 
 Reemplazar `YYYY-MM-DD` por `programDate`.
+
+Después, en todas las rutas que hayan podido leer GitHub, actualizar:
+
+`data/automation-status.json`
+
+Mensaje de commit:
+
+```text
+automation: record Con Sabor Argentino run YYYY-MM-DD
+```
+
+En una ejecución con episodio nuevo habrá dos actualizaciones consecutivas: primero el feed y luego el registro operativo. En un duplicado, ausencia de video o respuesta inválida sólo se actualiza el registro operativo.
 
 La credencial de GitHub debe existir únicamente dentro de Make. Nunca debe copiarse en:
 
@@ -184,12 +240,12 @@ Configurar manejadores de error o rutas del escenario para estos resultados:
 
 | Resultado | Acción |
 | --- | --- |
-| El `videoId` ya existe | Finalizar correctamente, sin commit. |
-| No hay un video válido | Enviar una alerta y no modificar GitHub. |
+| El `videoId` ya existe | No modificar el feed; registrar `duplicate` y finalizar correctamente. |
+| No hay un video válido | No modificar el feed; registrar `no_video` y enviar una alerta. |
 | Hay más de un video válido | Seleccionar la emisión completa válida más nueva. |
-| La respuesta de YouTube es inválida | Enviar una alerta y no modificar GitHub. |
-| La lectura o actualización de GitHub falla | Enviar una alerta y conservar intacto el JSON original. |
-| La actualización termina correctamente | Enviar confirmación con título, fecha y `/con-sabor-argentino`. |
+| La respuesta de YouTube es inválida | No modificar el feed; registrar `invalid_response` y enviar una alerta. |
+| La lectura o actualización de GitHub falla | Enviar una alerta y conservar intactos los JSON. El historial interno de Make queda como respaldo. |
+| La actualización termina correctamente | Registrar `episode_added` y enviar confirmación con título, fecha, `/con-sabor-argentino` y `/automatizaciones`. |
 
 La alerta puede enviarse por el canal operativo elegido por el administrador de Make. El escenario no debe continuar hacia GitHub cuando falte un dato obligatorio o una respuesta sea inválida.
 
@@ -215,8 +271,9 @@ Antes de activar el escenario semanal:
 
 1. Reemplazar `MIARGENTINA_YOUTUBE_CHANNEL_ID` y `RADIO_YOUTUBE_CHANNEL_ID` por los dos IDs aprobados dentro de los filtros de Make, no dentro del repositorio.
 2. Conectar la cuenta de Google en el módulo de YouTube.
-3. Conectar GitHub en Make con permiso de escritura limitado al repositorio y la rama necesarios.
+3. Crear una conexión HTTP autenticada para GitHub con un token limitado al repositorio y permiso `Contents: Read and write`.
 4. Confirmar la rama de producción y que un commit de prueba activa Cloudflare Pages.
 5. Definir el canal operativo que recibirá alertas y confirmaciones.
-6. Ejecutar el escenario una vez en modo manual y comprobar que un `videoId` ya existente termina sin commit.
-7. Activar la programación de los lunes a las 9:00 AM en `America/New_York`.
+6. Ejecutar el escenario una vez en modo manual y comprobar que un `videoId` existente no altera el feed pero agrega un registro `duplicate` al dashboard.
+7. Confirmar que `/automatizaciones` muestra la ejecución manual.
+8. Activar la programación de los lunes a las 9:00 AM en `America/New_York`.
