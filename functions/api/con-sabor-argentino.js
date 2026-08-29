@@ -2,6 +2,7 @@ const GITHUB_OWNER = "mberchillc";
 const GITHUB_REPOSITORY = "miargentina-draft";
 const GITHUB_BRANCH = "main";
 const DATA_FILE_PATH = "data/con-sabor-argentino.json";
+const PROGRAM_TIME_ZONE = "America/New_York";
 const GITHUB_API_VERSION = "2022-11-28";
 const MAX_REQUEST_BYTES = 32 * 1024;
 const MAX_GITHUB_RESPONSE_BYTES = 2 * 1024 * 1024;
@@ -246,6 +247,7 @@ function validateEpisode(payload) {
       throw new ApiError(400, "validation_error", "publishedAt must be a valid ISO datetime.");
     }
     episode.publishedAt = publishedAt;
+    episode.programDate = programDateForPublishedAt(publishedAt);
   }
 
   return episode;
@@ -303,6 +305,24 @@ function extractYouTubeVideoId(url) {
 
   const [route, id] = url.pathname.split("/").filter(Boolean);
   return ["embed", "live", "shorts"].includes(route) ? id || null : null;
+}
+
+function programDateForPublishedAt(value) {
+  const localParts = new Intl.DateTimeFormat("en-US", {
+    timeZone: PROGRAM_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date(value));
+
+  const part = (type) => localParts.find((item) => item.type === type)?.value;
+  const year = Number(part("year"));
+  const month = Number(part("month"));
+  const day = Number(part("day"));
+  const localDate = new Date(Date.UTC(year, month - 1, day));
+
+  localDate.setUTCDate(localDate.getUTCDate() - localDate.getUTCDay());
+  return localDate.toISOString().slice(0, 10);
 }
 
 function isValidDateOnly(value) {
