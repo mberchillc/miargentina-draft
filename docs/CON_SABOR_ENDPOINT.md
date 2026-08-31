@@ -1,6 +1,6 @@
 # Endpoint de episodios de Con Sabor Argentino
 
-Esta Cloudflare Pages Function recibe un episodio desde Make, evita duplicados por `videoId` y actualiza `data/con-sabor-argentino.json` mediante la API de GitHub. Cada episodio nuevo genera un commit en `main`; Cloudflare Pages publica después ese commit y la card aparece automáticamente en el sitio.
+Esta Cloudflare Pages Function recibe un episodio desde Make, evita duplicados por `videoId` y actualiza `data/con-sabor-argentino.json` mediante la API de GitHub. También registra cada ejecución correcta o duplicada en `data/automation-status.json`, de modo que el dashboard refleje el mismo resultado. Cada episodio nuevo genera un commit en `main`; Cloudflare Pages publica después ese commit y la card aparece automáticamente en el sitio.
 
 ## Endpoint
 
@@ -40,11 +40,13 @@ No guardar ninguno de estos valores en GitHub, en el frontend ni en esta documen
   "thumbnailUrl": "https://i.ytimg.com/vi/AbCdEfGhI12/maxresdefault.jpg",
   "durationIso": "PT2H3M17S",
   "description": "La nueva emisión de Con Sabor Argentino desde Miami.",
-  "publishedAt": "2026-08-23T15:00:00Z"
+  "publishedAt": "2026-08-23T15:00:00Z",
+  "sourceChannelId": "UC...",
+  "sourceChannelTitle": "MIArgentina USA"
 }
 ```
 
-`description` y `publishedAt` son opcionales. Los otros seis campos son obligatorios.
+`description`, `publishedAt`, `sourceChannelId` y `sourceChannelTitle` son opcionales. Los otros seis campos son obligatorios. Cuando llega `publishedAt`, el endpoint normaliza `programDate` al domingo correspondiente en la zona horaria `America/New_York`.
 
 ## Ejemplo con curl
 
@@ -75,7 +77,8 @@ Episodio nuevo:
 {
   "ok": true,
   "duplicate": false,
-  "videoId": "AbCdEfGhI12"
+  "videoId": "AbCdEfGhI12",
+  "dashboardUpdated": true
 }
 ```
 
@@ -84,11 +87,12 @@ Episodio ya registrado:
 ```json
 {
   "ok": true,
-  "duplicate": true
+  "duplicate": true,
+  "dashboardUpdated": true
 }
 ```
 
-Los errores de autenticación, validación o acceso a GitHub devuelven un código HTTP apropiado y un objeto JSON con `ok: false`.
+Los errores de autenticación, validación o acceso a GitHub devuelven un código HTTP apropiado y un objeto JSON con `ok: false`. Si el episodio se guarda pero falla la actualización del dashboard, Make debe reintentar: la segunda llamada detectará el duplicado y completará el registro operativo sin volver a crear la emisión.
 
 ## Configuración del despliegue
 

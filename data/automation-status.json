@@ -1,23 +1,30 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-27T17:22:41-04:00",
+  "updatedAt": "2026-08-31T11:10:21-04:00",
   "automations": [
     {
       "id": "con-sabor-argentino-weekly-feed",
       "name": "Con Sabor Argentino — emisión semanal",
       "provider": "Make",
-      "status": "pending_configuration",
+      "status": "warning",
       "schedule": {
         "frequency": "weekly",
         "day": "Monday",
         "time": "09:00",
         "timeZone": "America/New_York"
       },
-      "lastRunAt": null,
+      "lastRunAt": "2026-08-31T11:10:21-04:00",
       "nextRunAt": null,
-      "lastResult": "repository_ready",
-      "lastMessage": "El feed y el dashboard están publicados. Falta conectar y activar el escenario en Make.",
+      "lastResult": "episode_added",
+      "lastMessage": "La emisión del 30 de agosto se publicó mediante recuperación manual. Make no ejecutó el escenario programado y requiere reactivación.",
       "records": [
+        {
+          "runAt": "2026-08-31T11:10:21-04:00",
+          "result": "episode_added",
+          "message": "Recuperación manual: se publicó la emisión del 30 de agosto porque Make no ejecutó el escenario programado.",
+          "videoId": "dhCvddikX2U",
+          "programDate": "2026-08-30"
+        },
         {
           "runAt": "2026-08-27T17:22:41-04:00",
           "result": "repository_ready",
@@ -27,3 +34,4 @@
     }
   ]
 }
+

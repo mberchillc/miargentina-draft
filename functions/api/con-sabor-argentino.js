@@ -2,6 +2,8 @@ const GITHUB_OWNER = "mberchillc";
 const GITHUB_REPOSITORY = "miargentina-draft";
 const GITHUB_BRANCH = "main";
 const DATA_FILE_PATH = "data/con-sabor-argentino.json";
+const AUTOMATION_STATUS_FILE_PATH = "data/automation-status.json";
+const AUTOMATION_ID = "con-sabor-argentino-weekly-feed";
 const PROGRAM_TIME_ZONE = "America/New_York";
 const GITHUB_API_VERSION = "2022-11-28";
 const MAX_REQUEST_BYTES = 32 * 1024;
@@ -53,8 +55,9 @@ export async function onRequest(context) {
     const payload = await readRequestJson(request);
     const episode = validateEpisode(payload);
     const result = await addEpisodeToRepository(episode, githubToken);
+    await recordAutomationRun(result, episode, githubToken);
 
-    return jsonResponse(result);
+    return jsonResponse({ ...result, dashboardUpdated: true });
   } catch (error) {
     if (error instanceof ApiError) {
       return jsonResponse(
@@ -119,8 +122,82 @@ async function addEpisodeToRepository(episode, githubToken) {
   throw new ApiError(500, "internal_error", "The episode could not be processed.");
 }
 
+async function recordAutomationRun(result, episode, githubToken) {
+  for (let attempt = 1; attempt <= MAX_WRITE_ATTEMPTS; attempt += 1) {
+    const currentFile = await readAutomationStatusFile(githubToken);
+    const automationIndex = currentFile.data.automations.findIndex(
+      (automation) => automation?.id === AUTOMATION_ID
+    );
+
+    if (automationIndex < 0) {
+      throw new ApiError(
+        502,
+        "invalid_automation_file",
+        "The automation status file does not contain the expected automation."
+      );
+    }
+
+    const runAt = new Date().toISOString();
+    const runResult = result.duplicate ? "duplicate" : "episode_added";
+    const runMessage = result.duplicate
+      ? `La emisión del ${episode.programDate} ya estaba publicada.`
+      : `Se agregó la emisión del ${episode.programDate}.`;
+    const currentAutomation = currentFile.data.automations[automationIndex];
+    const records = Array.isArray(currentAutomation.records) ? currentAutomation.records : [];
+    const updatedAutomation = {
+      ...currentAutomation,
+      status: "active",
+      lastRunAt: runAt,
+      nextRunAt: nextMondayAtNine(runAt),
+      lastResult: runResult,
+      lastMessage: runMessage,
+      records: [
+        {
+          runAt,
+          result: runResult,
+          message: runMessage,
+          videoId: episode.videoId,
+          programDate: episode.programDate
+        },
+        ...records
+      ].slice(0, 52)
+    };
+    const automations = [...currentFile.data.automations];
+    automations[automationIndex] = updatedAutomation;
+    const updatedData = {
+      ...currentFile.data,
+      updatedAt: runAt,
+      automations
+    };
+    const updateResponse = await writeAutomationStatusFile(
+      githubToken,
+      currentFile.sha,
+      updatedData,
+      episode.programDate
+    );
+
+    if (updateResponse.ok) return;
+
+    if (updateResponse.status === 409 || updateResponse.status === 422) {
+      if (attempt < MAX_WRITE_ATTEMPTS) continue;
+
+      throw new ApiError(
+        409,
+        "concurrent_update",
+        "The automation status file changed during the request. Please retry."
+      );
+    }
+
+    throw new ApiError(
+      502,
+      "github_write_failed",
+      "GitHub could not save the automation status file."
+    );
+  }
+}
+
 async function readEpisodeFile(githubToken) {
-  const response = await fetch(githubContentsUrl(), {
+  const response = await fetch(githubContentsUrl(DATA_FILE_PATH), {
     method: "GET",
     headers: githubHeaders(githubToken)
   });
@@ -152,6 +229,39 @@ async function readEpisodeFile(githubToken) {
   return { sha: file.sha, data };
 }
 
+async function readAutomationStatusFile(githubToken) {
+  const response = await fetch(githubContentsUrl(AUTOMATION_STATUS_FILE_PATH), {
+    method: "GET",
+    headers: githubHeaders(githubToken)
+  });
+
+  if (!response.ok) {
+    throw new ApiError(
+      502,
+      "github_read_failed",
+      "GitHub could not read the automation status file."
+    );
+  }
+
+  const file = await readJsonResponse(response, MAX_GITHUB_RESPONSE_BYTES);
+  if (typeof file?.sha !== "string" || typeof file?.content !== "string") {
+    throw new ApiError(502, "invalid_github_response", "GitHub returned an invalid file response.");
+  }
+
+  let data;
+  try {
+    data = JSON.parse(decodeBase64Utf8(file.content));
+  } catch {
+    throw new ApiError(502, "invalid_automation_file", "The automation status file is not valid JSON.");
+  }
+
+  if (!data || typeof data !== "object" || Array.isArray(data) || !Array.isArray(data.automations)) {
+    throw new ApiError(502, "invalid_automation_file", "The automation status file has an invalid schema.");
+  }
+
+  return { sha: file.sha, data };
+}
+
 async function writeEpisodeFile(githubToken, sha, data, episode) {
   const formattedJson = `${JSON.stringify(data, null, 2)}\n`;
   const body = {
@@ -161,7 +271,7 @@ async function writeEpisodeFile(githubToken, sha, data, episode) {
     branch: GITHUB_BRANCH
   };
 
-  return fetch(githubContentsUrl(false), {
+  return fetch(githubContentsUrl(DATA_FILE_PATH, false), {
     method: "PUT",
     headers: {
       ...githubHeaders(githubToken),
@@ -171,8 +281,27 @@ async function writeEpisodeFile(githubToken, sha, data, episode) {
   });
 }
 
-function githubContentsUrl(includeRef = true) {
-  const encodedPath = DATA_FILE_PATH.split("/").map(encodeURIComponent).join("/");
+async function writeAutomationStatusFile(githubToken, sha, data, programDate) {
+  const formattedJson = `${JSON.stringify(data, null, 2)}\n`;
+  const body = {
+    message: `Record Con Sabor Argentino automation run ${programDate}`,
+    content: encodeBase64Utf8(formattedJson),
+    sha,
+    branch: GITHUB_BRANCH
+  };
+
+  return fetch(githubContentsUrl(AUTOMATION_STATUS_FILE_PATH, false), {
+    method: "PUT",
+    headers: {
+      ...githubHeaders(githubToken),
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+}
+
+function githubContentsUrl(filePath, includeRef = true) {
+  const encodedPath = filePath.split("/").map(encodeURIComponent).join("/");
   const baseUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPOSITORY}/contents/${encodedPath}`;
   return includeRef ? `${baseUrl}?ref=${encodeURIComponent(GITHUB_BRANCH)}` : baseUrl;
 }
@@ -250,6 +379,14 @@ function validateEpisode(payload) {
     episode.programDate = programDateForPublishedAt(publishedAt);
   }
 
+  if (payload.sourceChannelId !== undefined && payload.sourceChannelId !== null) {
+    episode.sourceChannelId = optionalString(payload.sourceChannelId, "sourceChannelId", 128);
+  }
+
+  if (payload.sourceChannelTitle !== undefined && payload.sourceChannelTitle !== null) {
+    episode.sourceChannelTitle = optionalString(payload.sourceChannelTitle, "sourceChannelTitle", 240);
+  }
+
   return episode;
 }
 
@@ -323,6 +460,47 @@ function programDateForPublishedAt(value) {
 
   localDate.setUTCDate(localDate.getUTCDate() - localDate.getUTCDay());
   return localDate.toISOString().slice(0, 10);
+}
+
+function nextMondayAtNine(value) {
+  const localParts = new Intl.DateTimeFormat("en-US", {
+    timeZone: PROGRAM_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    weekday: "short"
+  }).formatToParts(new Date(value));
+  const part = (type) => localParts.find((item) => item.type === type)?.value;
+  const weekdays = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  const localDate = new Date(Date.UTC(
+    Number(part("year")),
+    Number(part("month")) - 1,
+    Number(part("day"))
+  ));
+  const localWeekday = weekdays[part("weekday")];
+  const daysUntilMonday = localWeekday === 1 ? 7 : (8 - localWeekday) % 7;
+  localDate.setUTCDate(localDate.getUTCDate() + daysUntilMonday);
+
+  const offsetParts = new Intl.DateTimeFormat("en-US", {
+    timeZone: PROGRAM_TIME_ZONE,
+    timeZoneName: "longOffset",
+    hour: "2-digit"
+  }).formatToParts(localDate);
+  const offsetText = offsetParts.find((item) => item.type === "timeZoneName")?.value || "GMT-05:00";
+  const offsetMatch = /^GMT([+-])(\d{2}):(\d{2})$/.exec(offsetText);
+  const offsetMinutes = offsetMatch
+    ? (offsetMatch[1] === "+" ? 1 : -1) * (Number(offsetMatch[2]) * 60 + Number(offsetMatch[3]))
+    : -300;
+  const scheduledUtc = Date.UTC(
+    localDate.getUTCFullYear(),
+    localDate.getUTCMonth(),
+    localDate.getUTCDate(),
+    9,
+    0,
+    0
+  ) - offsetMinutes * 60 * 1000;
+
+  return new Date(scheduledUtc).toISOString();
 }
 
 function isValidDateOnly(value) {
