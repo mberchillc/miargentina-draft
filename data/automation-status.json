@@ -1,23 +1,30 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-10T16:02:08.453Z",
+  "updatedAt": "2026-09-10T16:27:35.853Z",
   "automations": [
     {
       "id": "con-sabor-argentino-weekly-feed",
       "name": "Con Sabor Argentino — emisión semanal",
       "provider": "GitHub Actions + Cloudflare Pages",
-      "status": "error",
+      "status": "active",
       "schedule": {
         "frequency": "weekly",
         "day": "Monday",
         "time": "09:00",
         "timeZone": "America/New_York"
       },
-      "lastRunAt": "2026-09-10T16:02:08.453Z",
+      "lastRunAt": "2026-09-10T16:27:35.853Z",
       "nextRunAt": "2026-09-14T13:00:00.000Z",
-      "lastResult": "invalid_response",
-      "lastMessage": "No se encontró una emisión completa válida. dhCvddikX2U: Faltan metadatos obligatorios del video. | UUDUA0yh8V0: Faltan metadatos obligatorios del video. | l49RwuNnQaw: Faltan metadatos obligatorios del video.",
+      "lastResult": "duplicate",
+      "lastMessage": "La emisión del 2026-08-30 ya estaba publicada; el control automático terminó correctamente.",
       "records": [
+        {
+          "runAt": "2026-09-10T16:27:35.853Z",
+          "result": "duplicate",
+          "message": "La emisión del 2026-08-30 ya estaba publicada; el control automático terminó correctamente.",
+          "videoId": "dhCvddikX2U",
+          "programDate": "2026-08-30"
+        },
         {
           "runAt": "2026-09-10T16:02:08.453Z",
           "result": "invalid_response",
