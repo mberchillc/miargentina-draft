@@ -144,6 +144,86 @@ export function parseVideoDetails(html) {
   };
 }
 
+function textValue(value) {
+  if (typeof value === "string") return value.trim();
+  if (typeof value?.simpleText === "string") return value.simpleText.trim();
+  if (Array.isArray(value?.runs)) {
+    return value.runs.map((run) => run?.text || "").join("").trim();
+  }
+  return "";
+}
+
+export function durationLabelToSeconds(value) {
+  const parts = String(value || "")
+    .trim()
+    .split(":")
+    .map((part) => Number(part));
+
+  if (parts.length < 2 || parts.length > 3 || parts.some((part) => !Number.isFinite(part))) {
+    return Number.NaN;
+  }
+
+  return parts.reduce((total, part) => total * 60 + part, 0);
+}
+
+function collectShortStrings(value, results = []) {
+  if (typeof value === "string") {
+    if (value.length <= 160) results.push(value);
+    return results;
+  }
+  if (!value || typeof value !== "object") return results;
+
+  for (const child of Object.values(value)) collectShortStrings(child, results);
+  return results;
+}
+
+export function parseChannelStreams(html) {
+  if (typeof html !== "string") throw new Error("YouTube devolvió una página inválida.");
+
+  const markers = ["var ytInitialData = ", "ytInitialData = "];
+  const serialized = markers
+    .map((marker) => extractBalancedJson(html, marker))
+    .find(Boolean);
+
+  if (!serialized) throw new Error("No se encontraron los datos públicos del canal.");
+
+  let initialData;
+  try {
+    initialData = JSON.parse(serialized);
+  } catch {
+    throw new Error("Los datos públicos del canal no son JSON válido.");
+  }
+
+  const videos = new Map();
+
+  function visit(value) {
+    if (!value || typeof value !== "object") return;
+
+    const model = value.lockupViewModel || value.videoRenderer || value.gridVideoRenderer || value;
+    const videoId = model?.contentId || model?.videoId || model?.navigationEndpoint?.watchEndpoint?.videoId;
+
+    if (typeof videoId === "string" && /^[A-Za-z0-9_-]{11}$/.test(videoId)) {
+      const title =
+        textValue(model?.metadata?.lockupMetadataViewModel?.title) ||
+        textValue(model?.title) ||
+        collectShortStrings(model).find((item) => titleMatches(item)) ||
+        "";
+      const durationLabel = collectShortStrings(model).find((item) => /^\d{1,2}:\d{2}(?::\d{2})?$/.test(item)) || "";
+      const durationSeconds = durationLabelToSeconds(durationLabel);
+
+      if (Number.isFinite(durationSeconds)) {
+        const current = videos.get(videoId);
+        if (!current || (!current.title && title)) videos.set(videoId, { videoId, title, durationSeconds });
+      }
+    }
+
+    for (const child of Object.values(value)) visit(child);
+  }
+
+  visit(initialData);
+  return [...videos.values()];
+}
+
 export function secondsToIso(totalSeconds) {
   const seconds = Math.max(0, Math.floor(Number(totalSeconds)));
   const hours = Math.floor(seconds / 3600);
@@ -247,14 +327,24 @@ async function fetchText(url) {
 }
 
 export async function findLatestEpisode({ fetchTextImpl = fetchText } = {}) {
-  const feedResults = await Promise.allSettled(
-    SOURCES.map(async (source) => {
-      const xml = await fetchTextImpl(
-        `https://www.youtube.com/feeds/videos.xml?channel_id=${encodeURIComponent(source.channelId)}`
-      );
-      return parseYouTubeFeed(xml, source);
-    })
-  );
+  const [feedResults, streamResults] = await Promise.all([
+    Promise.allSettled(
+      SOURCES.map(async (source) => {
+        const xml = await fetchTextImpl(
+          `https://www.youtube.com/feeds/videos.xml?channel_id=${encodeURIComponent(source.channelId)}`
+        );
+        return parseYouTubeFeed(xml, source);
+      })
+    ),
+    Promise.allSettled(
+      SOURCES.map(async (source) => {
+        const html = await fetchTextImpl(
+          `https://www.youtube.com/channel/${encodeURIComponent(source.channelId)}/streams`
+        );
+        return parseChannelStreams(html);
+      })
+    )
+  ]);
 
   const entries = feedResults
     .filter((result) => result.status === "fulfilled")
@@ -270,40 +360,42 @@ export async function findLatestEpisode({ fetchTextImpl = fetchText } = {}) {
     throw new Error(reasons[0] || "No se encontró una emisión pública de Con Sabor Argentino.");
   }
 
-  const inspected = [];
+  const streamMetadata = new Map(
+    streamResults
+      .filter((result) => result.status === "fulfilled")
+      .flatMap((result) => result.value)
+      .map((video) => [video.videoId, video])
+  );
+
   for (const entry of entries) {
-    try {
-      const html = await fetchTextImpl(`https://www.youtube.com/watch?v=${encodeURIComponent(entry.videoId)}`);
-      const details = parseVideoDetails(html);
+    const details = streamMetadata.get(entry.videoId);
+    if (!details) continue;
+    if (details.title && !titleMatches(details.title)) continue;
+    if (details.durationSeconds < MINIMUM_DURATION_SECONDS) continue;
 
-      if (!titleMatches(details.title)) continue;
-      if (details.durationSeconds < MINIMUM_DURATION_SECONDS) continue;
-      if (details.channelId && !SOURCES.some((source) => source.channelId === details.channelId)) continue;
-
-      const timestamp = details.startedAt || details.publishedAt || entry.publishedAt;
-      const thumbnailUrl = `https://i.ytimg.com/vi/${entry.videoId}/maxresdefault.jpg`;
-
-      return {
-        videoId: entry.videoId,
-        title: PROGRAM_TITLE,
-        programDate: programDateForTimestamp(timestamp),
-        youtubeUrl: `https://www.youtube.com/watch?v=${entry.videoId}`,
-        thumbnailUrl,
-        durationIso: secondsToIso(details.durationSeconds),
-        description: details.description || entry.description || DEFAULT_DESCRIPTION,
-        publishedAt: details.publishedAt || entry.publishedAt,
-        sourceChannelId: details.channelId || entry.channelId,
-        sourceChannelTitle: details.channelTitle || entry.channelTitle
-      };
-    } catch (error) {
-      inspected.push(`${entry.videoId}: ${error instanceof Error ? error.message : "respuesta inválida"}`);
-    }
+    return {
+      videoId: entry.videoId,
+      title: PROGRAM_TITLE,
+      programDate: programDateForTimestamp(entry.publishedAt),
+      youtubeUrl: `https://www.youtube.com/watch?v=${entry.videoId}`,
+      thumbnailUrl: `https://i.ytimg.com/vi/${entry.videoId}/maxresdefault.jpg`,
+      durationIso: secondsToIso(details.durationSeconds),
+      description: entry.description || DEFAULT_DESCRIPTION,
+      publishedAt: entry.publishedAt,
+      sourceChannelId: entry.channelId,
+      sourceChannelTitle: entry.channelTitle
+    };
   }
 
+  const streamErrors = streamResults
+    .filter((result) => result.status === "rejected")
+    .map((result) => result.reason?.message)
+    .filter(Boolean);
+
   throw new Error(
-    inspected.length
-      ? `No se encontró una emisión completa válida. ${inspected.slice(0, 3).join(" | ")}`
-      : "No se encontró una emisión completa válida."
+    streamErrors[0]
+      ? `No se pudo validar la duración de las emisiones. ${streamErrors[0]}`
+      : "No se encontró una emisión completa válida en los canales aprobados."
   );
 }
 
@@ -466,3 +558,4 @@ const isMainModule = process.argv[1]
   && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
 
 if (isMainModule) await main();
+

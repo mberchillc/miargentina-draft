@@ -2,8 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  durationLabelToSeconds,
   mergeEpisode,
   nextMondayAtNine,
+  parseChannelStreams,
   parseVideoDetails,
   parseYouTubeFeed,
   programDateForTimestamp,
@@ -67,6 +69,27 @@ test("extrae duración y fecha real de una transmisión", () => {
   assert.equal(details.channelTitle, "MIArgentina USA");
 });
 
+test("extrae título y duración desde la página pública de transmisiones", () => {
+  const initialData = {
+    contents: [{
+      lockupViewModel: {
+        contentId: "abcdefghijk",
+        metadata: {
+          lockupMetadataViewModel: {
+            title: { simpleText: "Con Sabor Argentino" },
+            metadata: { contentMetadataViewModel: { metadataRows: [{ metadataParts: [{ text: { simpleText: "2:03:04" } }] }] } }
+          }
+        }
+      }
+    }]
+  };
+  const html = `<script>var ytInitialData = ${JSON.stringify(initialData)};</script>`;
+  const streams = parseChannelStreams(html);
+
+  assert.equal(durationLabelToSeconds("2:03:04"), 7384);
+  assert.deepEqual(streams, [{ videoId: "abcdefghijk", title: "Con Sabor Argentino", durationSeconds: 7384 }]);
+});
+
 test("normaliza duración y fecha editorial", () => {
   assert.equal(secondsToIso(7384), "PT2H3M4S");
   assert.equal(programDateForTimestamp("2026-09-07T01:30:00Z"), "2026-09-06");
@@ -122,3 +145,4 @@ test("actualiza el dashboard y calcula la siguiente ejecución", () => {
   assert.equal(automation.records[0].videoId, sampleEpisode.videoId);
   assert.equal(nextMondayAtNine(now), "2026-09-14T13:00:00.000Z");
 });
+
