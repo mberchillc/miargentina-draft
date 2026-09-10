@@ -5,7 +5,7 @@
     {
       "id": "con-sabor-argentino-weekly-feed",
       "name": "Con Sabor Argentino — emisión semanal",
-      "provider": "Make",
+      "provider": "GitHub Actions + Cloudflare Pages",
       "status": "warning",
       "schedule": {
         "frequency": "weekly",
@@ -16,7 +16,7 @@
       "lastRunAt": "2026-08-31T11:10:21-04:00",
       "nextRunAt": null,
       "lastResult": "episode_added",
-      "lastMessage": "La emisión del 30 de agosto se publicó mediante recuperación manual. Make no ejecutó el escenario programado y requiere reactivación.",
+      "lastMessage": "La emisión del 30 de agosto se publicó mediante recuperación manual. El programador del repositorio está preparado para su primera verificación.",
       "records": [
         {
           "runAt": "2026-08-31T11:10:21-04:00",
@@ -34,4 +34,3 @@
     }
   ]
 }
-

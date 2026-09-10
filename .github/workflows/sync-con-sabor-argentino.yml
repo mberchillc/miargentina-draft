@@ -1,0 +1,55 @@
+name: Publicar Con Sabor Argentino
+
+on:
+  schedule:
+    - cron: "7 9 * * 1"
+      timezone: "America/New_York"
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/sync-con-sabor-argentino.yml"
+      - "scripts/sync-con-sabor-argentino.mjs"
+      - "scripts/sync-con-sabor-argentino.test.mjs"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: con-sabor-argentino-weekly-feed
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Revisar YouTube y actualizar el sitio
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Preparar Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      - name: Probar la lógica de publicación
+        run: node --test scripts/sync-con-sabor-argentino.test.mjs
+
+      - name: Buscar la última emisión
+        id: sync
+        run: node scripts/sync-con-sabor-argentino.mjs
+
+      - name: Guardar el episodio y el registro operativo
+        if: always()
+        shell: bash
+        run: |
+          git add data/con-sabor-argentino.json data/automation-status.json
+          if git diff --cached --quiet; then
+            echo "No hay cambios para guardar."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "automation: sync Con Sabor Argentino"
+          git push

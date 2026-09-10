@@ -241,7 +241,7 @@
       details.className = "automation-card__details";
       addDetail(details, "Programación", scheduleLabel(automation.schedule));
       addDetail(details, "Última ejecución", formatDateTime(automation.lastRunAt));
-      addDetail(details, "Próxima ejecución", automation.nextRunAt ? formatDateTime(automation.nextRunAt) : "Se calculará al activar Make");
+      addDetail(details, "Próxima ejecución", automation.nextRunAt ? formatDateTime(automation.nextRunAt) : "Aún no programada");
 
       const message = document.createElement("p");
       message.className = "automation-card__message";
@@ -315,7 +315,7 @@
     if (!records.length) {
       const empty = document.createElement("p");
       empty.className = "automation-empty";
-      empty.textContent = "Make todavía no registró ejecuciones.";
+      empty.textContent = "Todavía no se registraron ejecuciones automáticas.";
       elements.runHistory.append(empty);
       return;
     }
