@@ -2,6 +2,18 @@
   "version": 1,
   "episodes": [
     {
+      "videoId": "vEQHAEoaa8w",
+      "title": "Con Sabor Argentino",
+      "programDate": "2026-09-13",
+      "youtubeUrl": "https://www.youtube.com/watch?v=vEQHAEoaa8w",
+      "thumbnailUrl": "https://i.ytimg.com/vi/vEQHAEoaa8w/maxresdefault.jpg",
+      "durationIso": "PT2H9M",
+      "description": "Programa en vivo destinado a la comunidad latina en Estados Unidos por Actualidad Radio 1040",
+      "publishedAt": "2026-09-14T04:39:32+00:00",
+      "sourceChannelId": "UCjRFHcYvGmwto_u8rtoTWzA",
+      "sourceChannelTitle": "MIArgentina USA"
+    },
+    {
       "videoId": "dhCvddikX2U",
       "title": "Con Sabor Argentino",
       "programDate": "2026-08-30",
@@ -73,4 +85,3 @@
     }
   ]
 }
-
