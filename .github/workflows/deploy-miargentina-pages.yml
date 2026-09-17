@@ -5,6 +5,11 @@ on:
     branches:
       - main
   workflow_dispatch:
+  workflow_run:
+    workflows:
+      - Publicar Con Sabor Argentino
+    types:
+      - completed
 
 permissions:
   contents: read
@@ -17,6 +22,7 @@ concurrency:
 jobs:
   deploy:
     name: Deploy production site
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -31,3 +37,63 @@ jobs:
           wranglerVersion: "4.131.1"
           command: pages deploy . --project-name=miargentina-production --branch=main
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify the public episode feed
+        shell: bash
+        env:
+          PRODUCTION_FEED_URL: https://miargentina.us/data/con-sabor-argentino.json
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+
+          const localFeed = JSON.parse(
+            fs.readFileSync('data/con-sabor-argentino.json', 'utf8'),
+          );
+          const expectedVideoId = localFeed.episodes?.[0]?.videoId;
+
+          if (!expectedVideoId) {
+            throw new Error('The repository feed has no current episode to verify.');
+          }
+
+          const wait = (milliseconds) =>
+            new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+          for (let attempt = 1; attempt <= 12; attempt += 1) {
+            const verificationUrl = new URL(process.env.PRODUCTION_FEED_URL);
+            verificationUrl.searchParams.set(
+              'deployment_check',
+              `${process.env.GITHUB_RUN_ID}-${attempt}`,
+            );
+
+            try {
+              const response = await fetch(verificationUrl, {
+                cache: 'no-store',
+                headers: { 'cache-control': 'no-cache' },
+              });
+              if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+              }
+
+              const publicFeed = await response.json();
+              const publishedVideoId = publicFeed.episodes?.[0]?.videoId;
+              if (publishedVideoId === expectedVideoId) {
+                console.log(`Verified published episode ${expectedVideoId}.`);
+                process.exit(0);
+              }
+
+              console.log(
+                `Attempt ${attempt}: expected ${expectedVideoId}, found ${publishedVideoId || 'none'}.`,
+              );
+            } catch (error) {
+              console.log(`Attempt ${attempt}: ${error.message}`);
+            }
+
+            if (attempt < 12) {
+              await wait(5000);
+            }
+          }
+
+          throw new Error(
+            `Cloudflare deployment completed, but episode ${expectedVideoId} is not visible in production.`,
+          );
+          NODE
