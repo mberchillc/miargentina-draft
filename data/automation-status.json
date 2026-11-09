@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-02T22:44:04.245Z",
+  "updatedAt": "2026-11-09T23:24:00.663Z",
   "automations": [
     {
       "id": "con-sabor-argentino-weekly-feed",
@@ -13,11 +13,18 @@
         "time": "09:00",
         "timeZone": "America/New_York"
       },
-      "lastRunAt": "2026-11-02T22:44:04.245Z",
-      "nextRunAt": "2026-11-09T14:00:00.000Z",
+      "lastRunAt": "2026-11-09T23:24:00.663Z",
+      "nextRunAt": "2026-11-16T14:00:00.000Z",
       "lastResult": "episode_added",
-      "lastMessage": "Se publicó automáticamente la emisión del 2026-11-01.",
+      "lastMessage": "Se publicó automáticamente la emisión del 2026-11-08.",
       "records": [
+        {
+          "runAt": "2026-11-09T23:24:00.663Z",
+          "result": "episode_added",
+          "message": "Se publicó automáticamente la emisión del 2026-11-08.",
+          "videoId": "V6OeyO6pEvo",
+          "programDate": "2026-11-08"
+        },
         {
           "runAt": "2026-11-02T22:44:04.245Z",
           "result": "episode_added",
